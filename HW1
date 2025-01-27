@@ -1,0 +1,116 @@
+#HW1
+#Question 1
+docker run -it --entrypoint=bash python:3.12.8
+pip --version
+Output:pip 24.3.1 from /usr/local/lib/python3.12/site-packages/pip (python 3.12)
+
+#Question 2
+As the Postgres server name:db and Postgres container exposes port 5432;
+The answer is db:5432
+
+#Prepare Postgres
+Using Docker_file & input_data.py
+docker build -t taxi_ingest:v001 .
+docker run -it \
+    --network=pg-network \
+    taxi_ingest:v001 \
+    --user=root \
+    --password=root \
+    --host=pg-database \
+    --port=5432 \
+    --db=ny_taxi \
+    --table_name= "green_2019"\
+    --url="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/green_tripdata_2019-10.csv.gz"
+docker run -it \
+    --network=pg-network \
+    taxi_ingest:v001 \
+    --user=root \
+    --password=root \
+    --host=pg-database \
+    --port=5432 \
+    --db=ny_taxi \
+    --table_name="zones"\
+    --url="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/misc/taxi_zone_lookup.csv
+"
+#Question 3
+SELECT 
+    CASE
+        WHEN trip_distance <= 1 THEN 'Up to 1 mile'
+        WHEN trip_distance > 1 AND trip_distance <= 3 THEN '1 to 3 miles'
+        WHEN trip_distance > 3 AND trip_distance <= 7 THEN '3 to 7 miles'
+        WHEN trip_distance > 7 AND trip_distance <= 10 THEN '7 to 10 miles'
+        ELSE 'Over 10 miles'
+    END AS distance_category,
+    COUNT(*) AS trip_count
+FROM public.green_2019
+GROUP BY distance_category
+ORDER BY trip_count DESC;
+
+#Question 4
+SELECT 
+    DATE(lpep_pickup_datetime) AS pickup_date, 
+    MAX(trip_distance) AS max_trip_distance
+FROM public.green_2019
+GROUP BY pickup_date
+ORDER BY max_trip_distance DESC
+LIMIT 1;
+OUTPUT: 2019-10-31 515.89
+
+#Question 5
+WITH total_amounts_by_location AS (
+    SELECT 
+        "PULocationID", 
+        SUM(total_amount) AS total_amount
+    FROM public.green_2019
+    WHERE DATE(lpep_pickup_datetime) = '2019-10-18'
+    GROUP BY "PULocationID"
+    HAVING SUM(total_amount) > 13000
+)
+SELECT 
+    t."PULocationID",
+    z."Zone" AS pickup_zone,
+    t.total_amount
+FROM total_amounts_by_location t
+JOIN public.zones z
+ON t."PULocationID" = z."LocationID"
+ORDER BY t.total_amount DESC;
+
+#Question 6
+WITH pickup_zone_id AS (
+    SELECT "LocationID"
+    FROM public.zones
+    WHERE "Zone" = 'East Harlem North'
+),
+total_tips_by_dropoff_zone AS (
+    SELECT 
+        g."DOLocationID",
+        SUM(g.tip_amount) AS total_tip_amount
+    FROM public.green_2019 g
+    JOIN pickup_zone_id p
+    ON g."PULocationID" = p."LocationID"
+    GROUP BY g."DOLocationID"
+),
+largest_tip_dropoff_zone AS (
+    SELECT 
+        "DOLocationID", 
+        total_tip_amount
+    FROM total_tips_by_dropoff_zone
+    ORDER BY total_tip_amount DESC
+    LIMIT 1
+)
+SELECT 
+    z."Zone" AS dropoff_zone,
+    lt.total_tip_amount
+FROM largest_tip_dropoff_zone lt
+JOIN public.zones z
+ON lt."DOLocationID" = z."LocationID";
+
+#Qustion 7
+terraform init, terraform apply -auto-approve, terraform destroy
+
+terraform init:
+Downloads the provider plugins and sets up the backend. This is the first step when starting with Terraform in a new directory or working on an existing configuration.
+terraform apply -auto-approve:
+Generates proposed changes and auto-executes the plan. The -auto-approve flag skips the manual approval step during the apply phase.
+terraform destroy:
+Removes all resources managed by Terraform. This command deletes all infrastructure defined in the Terraform state.
