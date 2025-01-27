@@ -77,33 +77,39 @@ ORDER BY t.total_amount DESC;
 
 #Question 6
 WITH pickup_zone_id AS (
+    -- Step 1: Find the PULocationID for "East Harlem North"
     SELECT "LocationID"
     FROM public.zones
     WHERE "Zone" = 'East Harlem North'
 ),
-total_tips_by_dropoff_zone AS (
+largest_tip_by_dropoff_zone AS (
+    -- Step 2: Find the largest single tip_amount for each drop-off zone (DOLocationID)
     SELECT 
         g."DOLocationID",
-        SUM(g.tip_amount) AS total_tip_amount
+        MAX(g.tip_amount) AS max_tip_amount
     FROM public.green_2019 g
     JOIN pickup_zone_id p
     ON g."PULocationID" = p."LocationID"
     GROUP BY g."DOLocationID"
 ),
-largest_tip_dropoff_zone AS (
+largest_tip_zone AS (
+    -- Step 3: Find the drop-off zone with the largest single tip_amount
     SELECT 
         "DOLocationID", 
-        total_tip_amount
-    FROM total_tips_by_dropoff_zone
-    ORDER BY total_tip_amount DESC
+        max_tip_amount
+    FROM largest_tip_by_dropoff_zone
+    ORDER BY max_tip_amount DESC
     LIMIT 1
 )
+-- Step 4: Get the zone name for the drop-off location with the largest single tip
 SELECT 
     z."Zone" AS dropoff_zone,
-    lt.total_tip_amount
-FROM largest_tip_dropoff_zone lt
+    lt.max_tip_amount
+FROM largest_tip_zone lt
 JOIN public.zones z
 ON lt."DOLocationID" = z."LocationID";
+
+Output: JFK Airport 87.3
 
 #Qustion 7
 terraform init, terraform apply -auto-approve, terraform destroy
