@@ -28,4 +28,6 @@ FROM (
     UNION ALL
     SELECT COUNT(1) FROM `de_zoomcamp.green_tripdata_2020_12`
 );
+#Question 5
+SELECT COUNT(1) FROM `de_zoomcamp.yellow_tripdata_2021_03`
 
