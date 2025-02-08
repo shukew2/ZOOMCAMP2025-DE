@@ -1,0 +1,31 @@
+#Create external and inside table
+CREATE OR REPLACE EXTERNAL TABLE `dtc-de-449519.nytaxi_us.external_yellow_tripdata`
+OPTIONS (
+  format = 'PARQUET',
+  uris = ['gs://hw3_0906/yellow_tripdata_2024-*.parquet']);
+
+CREATE OR REPLACE TABLE taxi-rides-ny.nytaxi.yellow_tripdata_non_partitoned AS
+SELECT * FROM dtc-de-449519.nytaxi_us..external_yellow_tripdata;
+
+#count for 0 fare amount
+SELECT COUNT(*) AS zero_fare_count
+FROM `dtc-de-449519.nytaxi_us.external_yellow_tripdata`
+WHERE fare_amount = 0;
+
+
+#Partition by tpep_dropoff_datetime and Cluster on VendorID：
+CREATE OR REPLACE TABLE my_dataset.yellow_tripdata_partitioned_clustered
+PARTITION BY DATE(tpep_dropoff_datetime)
+CLUSTER BY VendorID
+AS
+SELECT * FROM my_dataset.yellow_tripdata_non_partition;
+
+#Searching in original table：
+SELECT DISTINCT VendorID
+FROM nytaxi_us.total
+WHERE tpep_dropoff_datetime BETWEEN '2024-03-01' AND '2024-03-15';
+
+#Searching in partition table：
+SELECT DISTINCT VendorID
+FROM my_dataset.yellow_tripdata_partitioned_clustered
+WHERE tpep_dropoff_datetime BETWEEN '2024-03-01' AND '2024-03-15';
