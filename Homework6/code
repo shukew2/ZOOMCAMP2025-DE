@@ -1,0 +1,33 @@
+Q1.
+  Redpanda version: v23.2.2 (rev c7fbb9f2)
+Q2.
+    rpk topic create green-trips
+    TOPIC         STATUS
+    green-trips   OK
+Q3.
+    import json
+from kafka import KafkaProducer
+
+def json_serializer(data):
+    return json.dumps(data).encode('utf-8')
+
+server = 'localhost:9092'
+
+producer = KafkaProducer(
+    bootstrap_servers=[server],
+    value_serializer=json_serializer
+)
+
+print(producer.bootstrap_connected())
+
+True
+Q4.
+from time import time
+
+t0 = time()
+
+producer.flush()
+
+t1 = time()
+took = t1 - t0
+print(f"Took {took} seconds")
